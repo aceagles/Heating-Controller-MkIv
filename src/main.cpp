@@ -16,19 +16,20 @@
 
 Servo myservo;
 int threshold = 60;
-int isOn;
-int led = 4;
+bool isOn;
+int led = 4, servo_start = 0, servo_end = 170, servo_delay = 550;
 boolean ledison = false;
+
 
 void PressButton() {
   if (analogRead(A0) > threshold) {
     //if the heating is on then it will usually take 4 button presses to turn it off, check that it has been off twice before stopping
     bool last = true;
     for (int i = 0; i < 4; i++) {
-      myservo.write(0);
-      delay(500);
-      myservo.write(90);
-      delay(500);
+      myservo.write(servo_end);
+      delay(servo_delay);
+      myservo.write(servo_start);
+      delay(servo_delay);
 
       if (analogRead(A0) < threshold && !last)
         break;
@@ -37,10 +38,10 @@ void PressButton() {
 
   } else {
     for (int i = 0; i < 2; i++) {
-      myservo.write(0);
-      delay(500);
-      myservo.write(90);
-      delay(900);
+      myservo.write(servo_end);
+      delay(servo_delay);
+      myservo.write(servo_start);
+      delay(servo_delay);
       if (analogRead(A0) > threshold)
         break;
     }
@@ -75,7 +76,7 @@ String getValue(String data, char separator, int index)
 }
 
 bool pollHTTP(bool isOn){
-  int toggle;
+  bool toggle = false;
     if ((WiFi.status() == WL_CONNECTED)) {
 
     WiFiClient client;
@@ -83,8 +84,8 @@ bool pollHTTP(bool isOn){
 
     Serial.print("[HTTP] begin...\n");
     // configure traged server and url
-    http.begin(client, "http://192.168.8.148:8000/heating/usage"); //HTTP
-    
+    http.begin(client, "http://heating.aceagles.co.uk/check"); //HTTP
+    http.addHeader("Authorization", "Token 4284fbecfacf40cd16565d98825d9b4fdc07eb7d");
     http.addHeader("Content-Type", "application/json");
     Serial.print("[HTTP] POST...\n");
     // start connection and send HTTP header and body
@@ -120,8 +121,8 @@ bool pollHTTP(bool isOn){
 }
 
 void activateHeating(){
-  
-  isOn = (analogRead(A0) > threshold ? 1 : 0);
+  Serial.println(analogRead(A0));
+  isOn = (analogRead(A0) > threshold);
   Serial.println(isOn);
   if(pollHTTP(isOn)){
     Serial.println("TOGGLING!");
@@ -133,7 +134,7 @@ void activateHeating(){
 
 void setup() {
   myservo.attach(5);
-  myservo.write(90);
+  myservo.write(servo_start);
   Serial.begin(115200);
 
 
@@ -151,5 +152,5 @@ void loop() {
   // wait for WiFi connection
 
   activateHeating();
-  delay(20000);
+  delay(5000);
 }
